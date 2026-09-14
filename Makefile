@@ -44,3 +44,6 @@ env-port-forward:
 
 env-port-close:
 	@docker compose down port_forwarder
+
+honey-run:
+	@go run ${PROJECT_ROOT}/cmd/honey/main.go
