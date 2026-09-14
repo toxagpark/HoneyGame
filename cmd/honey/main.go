@@ -15,6 +15,8 @@ import (
 	fight_pg_repo "github.com/toxagpark/HoneyGame/internal/feature/fight/repository/postgres"
 	fight_service "github.com/toxagpark/HoneyGame/internal/feature/fight/service"
 	fight_tg_transport "github.com/toxagpark/HoneyGame/internal/feature/fight/transport/tg"
+	menu_service "github.com/toxagpark/HoneyGame/internal/feature/menu/service"
+	menu_tg_transport "github.com/toxagpark/HoneyGame/internal/feature/menu/transport/tg"
 	users_pg_repo "github.com/toxagpark/HoneyGame/internal/feature/users/repository/postgres"
 	users_service "github.com/toxagpark/HoneyGame/internal/feature/users/service"
 	users_tg_transport "github.com/toxagpark/HoneyGame/internal/feature/users/transport/tg"
@@ -52,6 +54,9 @@ func main() {
 	fightRepo := fight_pg_repo.NewRepository(pool)
 	fightService := fight_service.NewService(fightRepo, service)
 	fightTransport := fight_tg_transport.NewHandler(bot, fightService)
+
+	menuService := menu_service.NewService(service, fightService)
+	menuTransport := menu_tg_transport.NewHandler(bot, menuService)
 
 	bh, err := th.NewBotHandler(bot, updates)
 	if err != nil {
@@ -91,6 +96,18 @@ func main() {
 		}
 		return nil
 	}, th.CallbackDataPrefix("fight:cancel:"))
+
+	bh.Handle(func(ctx *th.Context, update telego.Update) error {
+		menuTransport.HandleMenu(ctx, &update)
+		return nil
+	}, th.CommandEqual("menu"))
+
+	bh.Handle(func(ctx *th.Context, update telego.Update) error {
+		if update.CallbackQuery != nil {
+			menuTransport.HandleMenuCallback(ctx, *update.CallbackQuery)
+		}
+		return nil
+	}, th.CallbackDataPrefix("menu:"))
 
 	go func() {
 		if err := bh.Start(); err != nil {

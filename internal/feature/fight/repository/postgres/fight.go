@@ -10,12 +10,6 @@ import (
 	"github.com/toxagpark/HoneyGame/internal/core/domain"
 )
 
-type FightResult struct {
-	WinnerUserID int
-	LoserUserID  int
-	Amount       int64
-}
-
 // Fight проводит бой. Ставка создателя уже в банке (списана при создании вызова),
 // поэтому здесь списываем только у принимающего и начисляем победителю x2.
 func (r *Repository) Fight(
@@ -23,7 +17,7 @@ func (r *Repository) Fight(
 	creatorUserID int,
 	acceptorUserID int,
 	amount int64,
-) (FightResult, error) {
+) (domain.FightResult, error) {
 	const challengeQuery = `
 		DELETE FROM honey.active_challenges
 		WHERE creator_user_id = $1 AND amount = $2
@@ -45,7 +39,7 @@ func (r *Repository) Fight(
 
 	tx, err := r.Pool.Begin(ctx)
 	if err != nil {
-		return FightResult{}, fmt.Errorf("begin transaction: %w", err)
+		return domain.FightResult{}, fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -53,9 +47,9 @@ func (r *Repository) Fight(
 	var challengeID int
 	if err := tx.QueryRow(ctx, challengeQuery, creatorUserID, amount).Scan(&challengeID); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return FightResult{}, domain.ErrChallengeNotFound
+			return domain.FightResult{}, domain.ErrChallengeNotFound
 		}
-		return FightResult{}, fmt.Errorf("delete active challenge: %w", err)
+		return domain.FightResult{}, fmt.Errorf("delete active challenge: %w", err)
 	}
 
 	// FOR UPDATE в одном порядке (по возрастанию user_id) защищает от дедлока,
@@ -68,15 +62,15 @@ func (r *Repository) Fight(
 	var firstHoney, secondHoney int64
 	if err := tx.QueryRow(ctx, honeyQuery, firstID).Scan(&firstHoney); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return FightResult{}, domain.ErrUserHoneyNotFound
+			return domain.FightResult{}, domain.ErrUserHoneyNotFound
 		}
-		return FightResult{}, fmt.Errorf("select first honey: %w", err)
+		return domain.FightResult{}, fmt.Errorf("select first honey: %w", err)
 	}
 	if err := tx.QueryRow(ctx, honeyQuery, secondID).Scan(&secondHoney); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return FightResult{}, domain.ErrUserHoneyNotFound
+			return domain.FightResult{}, domain.ErrUserHoneyNotFound
 		}
-		return FightResult{}, fmt.Errorf("select second honey: %w", err)
+		return domain.FightResult{}, fmt.Errorf("select second honey: %w", err)
 	}
 
 	// first/second — порядок блокировки, а не creator/acceptor.
@@ -86,7 +80,7 @@ func (r *Repository) Fight(
 		acceptorBalance = secondHoney
 	}
 	if acceptorBalance < amount {
-		return FightResult{}, domain.ErrNotEnoughHoney
+		return domain.FightResult{}, domain.ErrNotEnoughHoney
 	}
 
 	// 50/50
@@ -100,22 +94,22 @@ func (r *Repository) Fight(
 	}
 
 	if _, err := tx.Exec(ctx, acceptorUpdateQuery, amount, acceptorUserID); err != nil {
-		return FightResult{}, fmt.Errorf("update acceptor honey: %w", err)
+		return domain.FightResult{}, fmt.Errorf("update acceptor honey: %w", err)
 	}
 	if _, err := tx.Exec(ctx, winnerUpdateQuery, amount*2, winnerID); err != nil {
-		return FightResult{}, fmt.Errorf("update winner honey: %w", err)
+		return domain.FightResult{}, fmt.Errorf("update winner honey: %w", err)
 	}
 
 	if _, err := tx.Exec(ctx, logQuery, amount, winnerID, loserID); err != nil {
-		return FightResult{}, fmt.Errorf("insert challenge log: %w", err)
+		return domain.FightResult{}, fmt.Errorf("insert challenge log: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return FightResult{}, fmt.Errorf("commit transaction: %w", err)
+		return domain.FightResult{}, fmt.Errorf("commit transaction: %w", err)
 	}
 
 	// Amount — чистый выигрыш/проигрыш: ставка, а не x2 из банка.
-	return FightResult{
+	return domain.FightResult{
 		WinnerUserID: winnerID,
 		LoserUserID:  loserID,
 		Amount:       amount,

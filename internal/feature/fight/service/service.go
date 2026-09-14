@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/toxagpark/HoneyGame/internal/core/domain"
-	fight_pg_repo "github.com/toxagpark/HoneyGame/internal/feature/fight/repository/postgres"
 )
 
 type Service struct {
@@ -24,6 +23,11 @@ type repository interface {
 		challengeID int,
 	) (domain.ActiveChallenge, error)
 
+	GetChallengeByCreator(
+		ctx context.Context,
+		creatorUserID int,
+	) (domain.ActiveChallenge, error)
+
 	GetChallenges(
 		ctx context.Context,
 		excludeUserID int,
@@ -40,7 +44,7 @@ type repository interface {
 		creatorUserID int,
 		acceptorUserID int,
 		amount int64,
-	) (fight_pg_repo.FightResult, error)
+	) (domain.FightResult, error)
 }
 
 // usersService — узкий интерфейс к фиче users: перевод tg_chat_id во внутренний ID.
