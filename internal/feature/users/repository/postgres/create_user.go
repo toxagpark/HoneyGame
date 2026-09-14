@@ -11,6 +11,9 @@ import (
 
 const uniqueViolationCode = "23505"
 
+// registrationHoney — стартовый бонус мёда за регистрацию.
+const registrationHoney = 15
+
 func (r *Repository) CreateUser(
 	ctx context.Context,
 	newUser domain.User,
@@ -21,8 +24,8 @@ func (r *Repository) CreateUser(
 		RETURNING id, tg_chat_id, user_name
 	`
 	const honeyQuery = `
-		INSERT INTO honey.user_honey (user_id)
-		VALUES ($1)
+		INSERT INTO honey.user_honey (user_id, honey)
+		VALUES ($1, $2)
 		RETURNING honey
 	`
 	const ensureHoneyQuery = `
@@ -69,6 +72,7 @@ func (r *Repository) CreateUser(
 		ctx,
 		honeyQuery,
 		id,
+		registrationHoney,
 	)
 
 	var honey int64
