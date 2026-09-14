@@ -16,7 +16,7 @@ type AcceptChallengeResult struct {
 }
 
 // ValidateAccept проверяет, можно ли принять вызов. Нужен транспорту,
-// чтобы отсечь ошибки до анимации боя.
+// чтобы отсечь ошибки (в т.ч. нехватку мёда у принимающего) до анимации боя.
 func (s *Service) ValidateAccept(
 	ctx context.Context,
 	tgChatID int64,
@@ -41,6 +41,12 @@ func (s *Service) ValidateAccept(
 
 	if challenge.CreatorUserID == user.ID {
 		return domain.ErrSelfChallenge
+	}
+
+	// Ставка принимающего списывается в момент боя: проверяем её заранее,
+	// чтобы не «играть» бой, который заведомо не состоится.
+	if user.Honey < challenge.Amount {
+		return domain.ErrNotEnoughHoney
 	}
 
 	return nil

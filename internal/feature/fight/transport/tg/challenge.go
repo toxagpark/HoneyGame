@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
 	telego "github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
 	"github.com/toxagpark/HoneyGame/internal/core/domain"
+	"github.com/toxagpark/HoneyGame/internal/core/tgutil"
 	fight_service "github.com/toxagpark/HoneyGame/internal/feature/fight/service"
 )
 
@@ -25,13 +25,13 @@ func (h *Handler) HandleCreateChallenge(ctx context.Context, update *telego.Upda
 
 	amount, err := parseAmount(update.Message.Text)
 	if err != nil {
-		h.reply(ctx, update.Message.Chat.ID, "Укажи ставку числом: /fight 10 🐻")
+		tgutil.Reply(ctx, h.bot, update.Message.Chat.ID, "Укажи ставку числом: /fight 10 🐻")
 		return
 	}
 
 	challenge, err := h.service.CreateChallenge(ctx, update.Message.From.ID, amount)
 	if err != nil {
-		h.reply(ctx, update.Message.Chat.ID, createChallengeErrorText(err))
+		tgutil.Reply(ctx, h.bot, update.Message.Chat.ID, createChallengeErrorText(err))
 		return
 	}
 
@@ -39,7 +39,7 @@ func (h *Handler) HandleCreateChallenge(ctx context.Context, update *telego.Upda
 		tu.ID(update.Message.Chat.ID),
 		fmt.Sprintf("⚔️ Вызов №%d создан!\n🐻 %s ставит 🍯 %d\nКто смелый?!", challenge.ID, challenge.CreatorName, challenge.Amount),
 	)
-	// Свои вызовы принимает только соперник — из /fights, поэтому кнопка «Взять» тут не нужна.
+	// Свои вызовы принимает только соперник — из меню и /fights, поэтому кнопка «Взять» тут не нужна.
 	msg.WithReplyMarkup(
 		tu.InlineKeyboard(
 			tu.InlineKeyboardRow(
@@ -47,7 +47,7 @@ func (h *Handler) HandleCreateChallenge(ctx context.Context, update *telego.Upda
 			),
 		),
 	)
-	h.send(ctx, msg)
+	tgutil.Send(ctx, h.bot, msg)
 }
 
 func (h *Handler) HandleListChallenges(ctx context.Context, update *telego.Update) {
@@ -57,13 +57,22 @@ func (h *Handler) HandleListChallenges(ctx context.Context, update *telego.Updat
 
 	challenges, err := h.service.GetChallenges(ctx, update.Message.From.ID)
 	if err != nil {
-		log.Println(err)
-		h.reply(ctx, update.Message.Chat.ID, tryStartText(err))
+		tgutil.Reply(ctx, h.bot, update.Message.Chat.ID, tryStartText(err))
 		return
 	}
 
+	renderChallenges(ctx, h, update.Message.Chat.ID, challenges)
+}
+
+// renderChallenges рисует список вызовов: текст + кнопки «взять».
+func renderChallenges(
+	ctx context.Context,
+	h *Handler,
+	chatID int64,
+	challenges []domain.ActiveChallenge,
+) {
 	if len(challenges) == 0 {
-		h.reply(ctx, update.Message.Chat.ID, "Открытых вызовов нет 🐻 Создай свой: /fight <ставка>")
+		tgutil.Reply(ctx, h.bot, chatID, "Открытых вызовов нет 🐻 Создай свой: /fight <ставка>")
 		return
 	}
 
@@ -78,74 +87,71 @@ func (h *Handler) HandleListChallenges(ctx context.Context, update *telego.Updat
 		))
 	}
 
-	msg := tu.Message(tu.ID(update.Message.Chat.ID), sb.String())
+	msg := tu.Message(tu.ID(chatID), sb.String())
 	msg.WithReplyMarkup(tu.InlineKeyboard(buttons...))
-	h.send(ctx, msg)
+	tgutil.Send(ctx, h.bot, msg)
 }
 
 func (h *Handler) HandleCancelCallback(ctx context.Context, query telego.CallbackQuery) {
-	challengeID, ok := parseCallbackID(query.Data, callbackPrefixCancel)
+	challengeID, ok := tgutil.ParseCallbackID(query.Data, callbackPrefixCancel)
 	if !ok {
-		h.answerCallback(ctx, query.ID, "Странная кнопка(")
+		tgutil.AnswerCallback(ctx, h.bot, query.ID, "Странная кнопка(")
 		return
 	}
 
 	challenge, err := h.service.CancelChallenge(ctx, query.From.ID, challengeID)
 	if err != nil {
 		if errors.Is(err, domain.ErrChallengeNotFound) {
-			h.answerCallback(ctx, query.ID, "Вызов уже не актуален 🐻")
+			tgutil.AnswerCallback(ctx, h.bot, query.ID, "Вызов уже не актуален 🐻")
 			return
 		}
 		if errors.Is(err, domain.ErrChallengeNotOwner) {
-			h.answerCallback(ctx, query.ID, "Отозвать может только создатель вызова 🐻")
+			tgutil.AnswerCallback(ctx, h.bot, query.ID, "Отозвать может только создатель вызова 🐻")
 			return
 		}
-		log.Println(err)
-		h.editMessage(ctx, query, tryStartText(err))
-		h.answerCallback(ctx, query.ID, "Ошибка отзыва")
+		tgutil.EditCallbackMessage(ctx, h.bot, query, tryStartText(err))
+		tgutil.AnswerCallback(ctx, h.bot, query.ID, "Ошибка отзыва")
 		return
 	}
 
-	h.editMessage(ctx, query, fmt.Sprintf("✖️ Вызов №%d на 🍯 %d отозван 🐻", challenge.ID, challenge.Amount))
-	h.answerCallback(ctx, query.ID, "Вызов отозван")
+	tgutil.EditCallbackMessage(ctx, h.bot, query, fmt.Sprintf("✖️ Вызов №%d на 🍯 %d отозван 🐻", challenge.ID, challenge.Amount))
+	tgutil.AnswerCallback(ctx, h.bot, query.ID, "Вызов отозван")
 }
 
 func (h *Handler) HandleAcceptCallback(ctx context.Context, query telego.CallbackQuery) {
-	challengeID, ok := parseCallbackID(query.Data, callbackPrefixAccept)
+	challengeID, ok := tgutil.ParseCallbackID(query.Data, callbackPrefixAccept)
 	if !ok {
-		h.answerCallback(ctx, query.ID, "Странная кнопка(")
+		tgutil.AnswerCallback(ctx, h.bot, query.ID, "Странная кнопка(")
 		return
 	}
 
 	// Ошибки отсекаем до анимации, чтобы не «играть» заведомый провал.
 	if err := h.service.ValidateAccept(ctx, query.From.ID, challengeID); err != nil {
-		log.Println(err)
-		h.answerCallback(ctx, query.ID, validateAcceptErrorText(err))
+		tgutil.AnswerCallback(ctx, h.bot, query.ID, validateAcceptErrorText(err))
 		return
 	}
 
 	// Анимация «идёт игра» — редактируем сообщение с кнопками.
-	h.playFightAnimation(ctx, query)
+	playFightAnimation(ctx, h, query)
 
 	result, err := h.service.AcceptChallenge(ctx, query.From.ID, challengeID)
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrChallengeNotFound):
-			h.editMessage(ctx, query, "⌛️ Вызов уже забрали другим медведем 🐻")
+			tgutil.EditCallbackMessage(ctx, h.bot, query, "⌛️ Вызов уже забрали другим медведем 🐻")
 		case errors.Is(err, domain.ErrNotEnoughHoney):
-			h.editMessage(ctx, query, "🤷 Не хватило мёда на бой. Попробуйте прописать /start")
+			tgutil.EditCallbackMessage(ctx, h.bot, query, "🤷 Не хватило мёда на бой. Попробуйте прописать /start")
 		default:
-			log.Println(err)
-			h.editMessage(ctx, query, "Ошибка боя( Попробуйте прописать /start")
+			tgutil.EditCallbackMessage(ctx, h.bot, query, "Ошибка боя( Попробуйте прописать /start")
 		}
-		h.answerCallback(ctx, query.ID, "Бой не состоялся")
+		tgutil.AnswerCallback(ctx, h.bot, query.ID, "Бой не состоялся")
 		return
 	}
 
-	h.announceResult(ctx, query, result)
+	announceResult(ctx, h, query, result)
 }
 
-func (h *Handler) playFightAnimation(ctx context.Context, query telego.CallbackQuery) {
+func playFightAnimation(ctx context.Context, h *Handler, query telego.CallbackQuery) {
 	frames := []string{
 		"🐻‍❄️ Мишки сходятся...",
 		"💥 Удар!",
@@ -154,20 +160,20 @@ func (h *Handler) playFightAnimation(ctx context.Context, query telego.CallbackQ
 	}
 
 	for _, frame := range frames {
-		h.editMessage(ctx, query, frame)
+		tgutil.EditCallbackMessage(ctx, h.bot, query, frame)
 		time.Sleep(800 * time.Millisecond)
 	}
 }
 
-func (h *Handler) announceResult(ctx context.Context, query telego.CallbackQuery, result fight_service.AcceptChallengeResult) {
+func announceResult(ctx context.Context, h *Handler, query telego.CallbackQuery, result fight_service.AcceptChallengeResult) {
 	var acceptorText string
 	if result.AcceptorWon {
 		acceptorText = fmt.Sprintf("🏆 Ты победил!\n🍯 +%d мёда", result.Amount)
 	} else {
 		acceptorText = fmt.Sprintf("💀 Ты проиграл...\n🍯 -%d мёда", result.Amount)
 	}
-	h.editMessage(ctx, query, acceptorText)
-	h.answerCallback(ctx, query.ID, "Итог боя")
+	tgutil.EditCallbackMessage(ctx, h.bot, query, acceptorText)
+	tgutil.AnswerCallback(ctx, h.bot, query.ID, "Итог боя")
 
 	// Итог второму участнику отдельным сообщением.
 	var opponentText string
@@ -176,7 +182,7 @@ func (h *Handler) announceResult(ctx context.Context, query telego.CallbackQuery
 	} else {
 		opponentText = fmt.Sprintf("🏆 Твой вызов приняли и ты победил!\n🍯 +%d мёда", result.Amount)
 	}
-	h.reply(ctx, result.OpponentTgChatID, opponentText)
+	tgutil.Reply(ctx, h.bot, result.OpponentTgChatID, opponentText)
 }
 
 // --- тексты ошибок ---
@@ -200,6 +206,8 @@ func validateAcceptErrorText(err error) string {
 		return "Вызов уже не актуален 🐻"
 	case errors.Is(err, domain.ErrSelfChallenge):
 		return "На себя драться нельзя 🐻"
+	case errors.Is(err, domain.ErrNotEnoughHoney):
+		return "🍯 У тебя не хватает мёда на этот вызов"
 	default:
 		return tryStartText(err)
 	}
