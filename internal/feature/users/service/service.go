@@ -21,6 +21,11 @@ type repository interface {
 		tgChatID int64,
 	) (domain.User, error)
 
+	GetUserByID(
+		ctx context.Context,
+		userID int,
+	) (domain.User, error)
+
 	UpdateUser(
 		ctx context.Context,
 		user domain.User,
