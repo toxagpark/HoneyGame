@@ -9,11 +9,11 @@ import (
 
 func (s *Service) GetUser(
 	ctx context.Context,
-	tgChatID int64,
+	tgUserID int64,
 ) (domain.User, error) {
 	user, err := s.repo.GetUser(
 		ctx,
-		tgChatID,
+		tgUserID,
 	)
 	if err != nil {
 		return domain.User{}, fmt.Errorf("failed to get user: %w", err)

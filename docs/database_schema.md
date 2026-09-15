@@ -16,7 +16,7 @@ erDiagram
 
     users {
         int id PK
-        bigint tg_chat_id
+        bigint tg_user_id
         varchar user_name
     }
 
@@ -49,7 +49,7 @@ erDiagram
 | Поле | Тип | Описание |
 |------|-----|----------|
 | id | SERIAL | Первичный ключ |
-| tg_chat_id | BIGINT | ID чата в Telegram (уникальный) |
+| tg_user_id | BIGINT | ID игрока в Telegram (уникальный) |
 | user_name | VARCHAR(255) | Имя пользователя |
 
 ### `honey.user_honey`

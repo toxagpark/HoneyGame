@@ -11,9 +11,9 @@ import (
 // GetChallenges возвращает открытые вызовы других игроков (свои исключены).
 func (s *Service) GetChallenges(
 	ctx context.Context,
-	tgChatID int64,
+	tgUserID int64,
 ) ([]domain.ActiveChallenge, error) {
-	user, err := s.users.GetUser(ctx, tgChatID)
+	user, err := s.users.GetUser(ctx, tgUserID)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) ||
 			errors.Is(err, domain.ErrUserHoneyNotFound) {

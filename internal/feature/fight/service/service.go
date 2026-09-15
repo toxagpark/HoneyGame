@@ -47,16 +47,11 @@ type repository interface {
 	) (domain.FightResult, error)
 }
 
-// usersService — узкий интерфейс к фиче users: перевод tg_chat_id во внутренний ID.
+// usersService — узкий интерфейс к фиче users: перевод tg_user_id во внутренний ID.
 type usersService interface {
 	GetUser(
 		ctx context.Context,
-		tgChatID int64,
-	) (domain.User, error)
-
-	GetUserByID(
-		ctx context.Context,
-		userID int,
+		tgUserID int64,
 	) (domain.User, error)
 }
 

@@ -8,8 +8,10 @@ import (
 )
 
 type Handler struct {
-	bot     *telego.Bot
-	service service
+	bot *telego.Bot
+	// responseChatID — игровой чат из TG_CHAT_ID: сюда бот отвечает всем игрокам.
+	responseChatID int64
+	service        service
 }
 
 type service interface {
@@ -20,16 +22,22 @@ type service interface {
 
 	GetUser(
 		ctx context.Context,
-		tgChatID int64,
+		tgUserID int64,
 	) (domain.User, error)
+
+	GetTopUsers(
+		ctx context.Context,
+	) ([]domain.User, error)
 }
 
 func NewHandler(
 	bot *telego.Bot,
+	responseChatID int64,
 	service service,
 ) *Handler {
 	return &Handler{
-		bot:     bot,
-		service: service,
+		bot:            bot,
+		responseChatID: responseChatID,
+		service:        service,
 	}
 }

@@ -15,23 +15,23 @@ func (r *Repository) UpdateUser(
 	const query = `
 		UPDATE honey.users u
 		SET user_name = $2
-		WHERE u.tg_chat_id = $1
-		RETURNING u.id, u.tg_chat_id, u.user_name,
+		WHERE u.tg_user_id = $1
+		RETURNING u.id, u.tg_user_id, u.user_name,
 			(SELECT h.honey FROM honey.user_honey h WHERE h.user_id = u.id)
 	`
 
 	row := r.Pool.QueryRow(
 		ctx,
 		query,
-		user.TgChatID,
+		user.TgUserID,
 		user.UserName,
 	)
 
 	var id int
-	var tgChatId int64
+	var tgUserID int64
 	var userName string
 	var honey *int64
-	if err := row.Scan(&id, &tgChatId, &userName, &honey); err != nil {
+	if err := row.Scan(&id, &tgUserID, &userName, &honey); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.User{}, domain.ErrUserNotFound
 		}
@@ -44,7 +44,7 @@ func (r *Repository) UpdateUser(
 
 	updatedUser := domain.NewUser(
 		id,
-		tgChatId,
+		tgUserID,
 		userName,
 		*honey,
 	)

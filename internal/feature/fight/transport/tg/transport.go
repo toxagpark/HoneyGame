@@ -9,48 +9,52 @@ import (
 )
 
 type Handler struct {
-	bot     *telego.Bot
-	service service
+	bot *telego.Bot
+	// responseChatID — игровой чат из TG_CHAT_ID: сюда бот отвечает всем игрокам.
+	responseChatID int64
+	service        service
 }
 
 // service — интерфейс фичи fight с точки зрения транспорта.
 type service interface {
 	CreateChallenge(
 		ctx context.Context,
-		tgChatID int64,
+		tgUserID int64,
 		amount int64,
 	) (domain.ActiveChallenge, error)
 
 	GetChallenges(
 		ctx context.Context,
-		tgChatID int64,
+		tgUserID int64,
 	) ([]domain.ActiveChallenge, error)
 
 	CancelChallenge(
 		ctx context.Context,
-		tgChatID int64,
+		tgUserID int64,
 		challengeID int,
 	) (domain.ActiveChallenge, error)
 
 	ValidateAccept(
 		ctx context.Context,
-		tgChatID int64,
+		tgUserID int64,
 		challengeID int,
 	) error
 
 	AcceptChallenge(
 		ctx context.Context,
-		tgChatID int64,
+		tgUserID int64,
 		challengeID int,
 	) (fight_service.AcceptChallengeResult, error)
 }
 
 func NewHandler(
 	bot *telego.Bot,
+	responseChatID int64,
 	service service,
 ) *Handler {
 	return &Handler{
-		bot:     bot,
-		service: service,
+		bot:            bot,
+		responseChatID: responseChatID,
+		service:        service,
 	}
 }

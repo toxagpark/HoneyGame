@@ -11,7 +11,8 @@ import (
 	"github.com/toxagpark/HoneyGame/internal/core/domain"
 )
 
-func (h *Handler) HandleGetUser(ctx context.Context, update *telego.Update) {
+// HandleGetMe показывает профиль вызвавшего: внутренний ID, имя, баланс мёда.
+func (h *Handler) HandleGetMe(ctx context.Context, update *telego.Update) {
 	if update.Message == nil {
 		return
 	}
@@ -30,8 +31,7 @@ func (h *Handler) HandleGetUser(ctx context.Context, update *telego.Update) {
 		}
 
 		msg := tu.Message(tu.ID(h.responseChatID), text)
-		_, sendErr := h.bot.SendMessage(ctx, msg)
-		if sendErr != nil {
+		if _, sendErr := h.bot.SendMessage(ctx, msg); sendErr != nil {
 			log.Println("send error:", sendErr)
 		}
 		return
@@ -39,10 +39,9 @@ func (h *Handler) HandleGetUser(ctx context.Context, update *telego.Update) {
 
 	msg := tu.Message(
 		tu.ID(h.responseChatID),
-		fmt.Sprintf("🐻 Медведь\nID: %d\nИмя: %s\n🍯 Мёд: %d", user.ID, user.UserName, user.Honey),
+		fmt.Sprintf("🐻 Ты медведь!\nID: %d\nИмя: %s\n🍯 Мёд: %d", user.ID, user.UserName, user.Honey),
 	)
-	_, err = h.bot.SendMessage(ctx, msg)
-	if err != nil {
-		log.Println("send error:", err)
+	if _, sendErr := h.bot.SendMessage(ctx, msg); sendErr != nil {
+		log.Println("send error:", sendErr)
 	}
 }

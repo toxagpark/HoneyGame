@@ -10,19 +10,18 @@ import (
 
 // AcceptChallengeResult — исход боя с точки зрения принявшего вызов.
 type AcceptChallengeResult struct {
-	AcceptorWon      bool
-	Amount           int64
-	OpponentTgChatID int64
+	AcceptorWon bool
+	Amount      int64
 }
 
 // ValidateAccept проверяет, можно ли принять вызов. Нужен транспорту,
 // чтобы отсечь ошибки (в т.ч. нехватку мёда у принимающего) до анимации боя.
 func (s *Service) ValidateAccept(
 	ctx context.Context,
-	tgChatID int64,
+	tgUserID int64,
 	challengeID int,
 ) error {
-	user, err := s.users.GetUser(ctx, tgChatID)
+	user, err := s.users.GetUser(ctx, tgUserID)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) ||
 			errors.Is(err, domain.ErrUserHoneyNotFound) {
@@ -52,13 +51,13 @@ func (s *Service) ValidateAccept(
 	return nil
 }
 
-// AcceptChallenge принимает вызов (по tg_chat_id), проводит бой и возвращает исход.
+// AcceptChallenge принимает вызов (по tg_user_id), проводит бой и возвращает исход.
 func (s *Service) AcceptChallenge(
 	ctx context.Context,
-	tgChatID int64,
+	tgUserID int64,
 	challengeID int,
 ) (AcceptChallengeResult, error) {
-	user, err := s.users.GetUser(ctx, tgChatID)
+	user, err := s.users.GetUser(ctx, tgUserID)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) ||
 			errors.Is(err, domain.ErrUserHoneyNotFound) {
@@ -89,17 +88,8 @@ func (s *Service) AcceptChallenge(
 		return AcceptChallengeResult{}, fmt.Errorf("failed to fight: %w", err)
 	}
 
-	opponent, err := s.users.GetUserByID(ctx, challenge.CreatorUserID)
-	if err != nil {
-		if errors.Is(err, domain.ErrUserNotFound) {
-			return AcceptChallengeResult{}, err
-		}
-		return AcceptChallengeResult{}, fmt.Errorf("failed to get opponent: %w", err)
-	}
-
 	return AcceptChallengeResult{
-		AcceptorWon:      result.WinnerUserID == user.ID,
-		Amount:           result.Amount,
-		OpponentTgChatID: opponent.TgChatID,
+		AcceptorWon: result.WinnerUserID == user.ID,
+		Amount:      result.Amount,
 	}, nil
 }

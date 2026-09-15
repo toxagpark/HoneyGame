@@ -19,9 +19,9 @@ func (r *Repository) CreateUser(
 	newUser domain.User,
 ) (domain.User, error) {
 	const query = `
-		INSERT INTO honey.users (tg_chat_id, user_name)
+		INSERT INTO honey.users (tg_user_id, user_name)
 		VALUES ($1, $2)
-		RETURNING id, tg_chat_id, user_name
+		RETURNING id, tg_user_id, user_name
 	`
 	const honeyQuery = `
 		INSERT INTO honey.user_honey (user_id, honey)
@@ -30,7 +30,7 @@ func (r *Repository) CreateUser(
 	`
 	const ensureHoneyQuery = `
 		INSERT INTO honey.user_honey (user_id)
-		SELECT id FROM honey.users WHERE tg_chat_id = $1
+		SELECT id FROM honey.users WHERE tg_user_id = $1
 		ON CONFLICT (user_id) DO NOTHING
 	`
 
@@ -43,14 +43,14 @@ func (r *Repository) CreateUser(
 	row := tx.QueryRow(
 		ctx,
 		query,
-		newUser.TgChatID,
+		newUser.TgUserID,
 		newUser.UserName,
 	)
 
 	var id int
-	var tgChatId int64
+	var tgUserID int64
 	var userName string
-	if err := row.Scan(&id, &tgChatId, &userName); err != nil {
+	if err := row.Scan(&id, &tgUserID, &userName); err != nil {
 		var pgErr *pgconn.PgError
 		if !errors.As(err, &pgErr) || pgErr.Code != uniqueViolationCode {
 			return domain.User{}, fmt.Errorf("insert user: %w", err)
@@ -61,7 +61,7 @@ func (r *Repository) CreateUser(
 		if rbErr := tx.Rollback(ctx); rbErr != nil {
 			return domain.User{}, fmt.Errorf("rollback transaction: %w", rbErr)
 		}
-		if _, err := r.Pool.Exec(ctx, ensureHoneyQuery, newUser.TgChatID); err != nil {
+		if _, err := r.Pool.Exec(ctx, ensureHoneyQuery, newUser.TgUserID); err != nil {
 			return domain.User{}, fmt.Errorf("ensure user honey: %w", err)
 		}
 
@@ -86,7 +86,7 @@ func (r *Repository) CreateUser(
 
 	user := domain.NewUser(
 		id,
-		tgChatId,
+		tgUserID,
 		userName,
 		honey,
 	)

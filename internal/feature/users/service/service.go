@@ -18,7 +18,7 @@ type repository interface {
 
 	GetUser(
 		ctx context.Context,
-		tgChatID int64,
+		tgUserID int64,
 	) (domain.User, error)
 
 	GetUserByID(
@@ -30,6 +30,11 @@ type repository interface {
 		ctx context.Context,
 		user domain.User,
 	) (domain.User, error)
+
+	GetTopUsers(
+		ctx context.Context,
+		limit int,
+	) ([]domain.User, error)
 }
 
 func NewService(r repository) *Service {
