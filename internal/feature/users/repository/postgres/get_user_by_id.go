@@ -13,7 +13,7 @@ func (r *Repository) GetUserByID(
 	userID int,
 ) (domain.User, error) {
 	const query = `
-		SELECT u.id, u.tg_chat_id, u.user_name, h.honey
+		SELECT u.id, u.tg_user_id, u.user_name, h.honey
 		FROM honey.users u
 		JOIN honey.user_honey h ON h.user_id = u.id
 		WHERE u.id = $1
@@ -26,10 +26,10 @@ func (r *Repository) GetUserByID(
 	)
 
 	var id int
-	var dbTgChatID int64
+	var dbTgUserID int64
 	var userName string
 	var honey int64
-	if err := row.Scan(&id, &dbTgChatID, &userName, &honey); err != nil {
+	if err := row.Scan(&id, &dbTgUserID, &userName, &honey); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return domain.User{}, domain.ErrUserNotFound
 		}
@@ -38,7 +38,7 @@ func (r *Repository) GetUserByID(
 
 	user := domain.NewUser(
 		id,
-		dbTgChatID,
+		dbTgUserID,
 		userName,
 		honey,
 	)

@@ -11,9 +11,9 @@ import (
 // MyChallenge возвращает активный вызов игрока; ErrChallengeNotFound, если его нет.
 func (s *Service) MyChallenge(
 	ctx context.Context,
-	tgChatID int64,
+	tgUserID int64,
 ) (domain.ActiveChallenge, error) {
-	user, err := s.users.GetUser(ctx, tgChatID)
+	user, err := s.users.GetUser(ctx, tgUserID)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) ||
 			errors.Is(err, domain.ErrUserHoneyNotFound) {

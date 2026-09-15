@@ -2,7 +2,7 @@ CREATE SCHEMA honey;
 
 CREATE TABLE honey.users (
     id SERIAL PRIMARY KEY,
-    tg_chat_id BIGINT NOT NULL UNIQUE,
+    tg_user_id BIGINT NOT NULL UNIQUE,
     user_name VARCHAR(255) NOT NULL
 );
 

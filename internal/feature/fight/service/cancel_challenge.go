@@ -11,10 +11,10 @@ import (
 // CancelChallenge отзывает свой вызов и возвращает ставку.
 func (s *Service) CancelChallenge(
 	ctx context.Context,
-	tgChatID int64,
+	tgUserID int64,
 	challengeID int,
 ) (domain.ActiveChallenge, error) {
-	user, err := s.users.GetUser(ctx, tgChatID)
+	user, err := s.users.GetUser(ctx, tgUserID)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) ||
 			errors.Is(err, domain.ErrUserHoneyNotFound) {

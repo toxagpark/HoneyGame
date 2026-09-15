@@ -10,7 +10,7 @@ import (
 	telego "github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
 	"github.com/toxagpark/HoneyGame/internal/core/domain"
-	"github.com/toxagpark/HoneyGame/internal/core/tgutil"
+	tgutil "github.com/toxagpark/HoneyGame/internal/core/transport/tg/util"
 	fight_service "github.com/toxagpark/HoneyGame/internal/feature/fight/service"
 )
 
@@ -25,18 +25,18 @@ func (h *Handler) HandleCreateChallenge(ctx context.Context, update *telego.Upda
 
 	amount, err := parseAmount(update.Message.Text)
 	if err != nil {
-		tgutil.Reply(ctx, h.bot, update.Message.Chat.ID, "Укажи ставку числом: /fight 10 🐻")
+		tgutil.Reply(ctx, h.bot, h.responseChatID, "Укажи ставку числом: /fight 10 🐻")
 		return
 	}
 
 	challenge, err := h.service.CreateChallenge(ctx, update.Message.From.ID, amount)
 	if err != nil {
-		tgutil.Reply(ctx, h.bot, update.Message.Chat.ID, createChallengeErrorText(err))
+		tgutil.Reply(ctx, h.bot, h.responseChatID, createChallengeErrorText(err))
 		return
 	}
 
 	msg := tu.Message(
-		tu.ID(update.Message.Chat.ID),
+		tu.ID(h.responseChatID),
 		fmt.Sprintf("⚔️ Вызов №%d создан!\n🐻 %s ставит 🍯 %d\nКто смелый?!", challenge.ID, challenge.CreatorName, challenge.Amount),
 	)
 	// Свои вызовы принимает только соперник — из меню и /fights, поэтому кнопка «Взять» тут не нужна.
@@ -57,11 +57,11 @@ func (h *Handler) HandleListChallenges(ctx context.Context, update *telego.Updat
 
 	challenges, err := h.service.GetChallenges(ctx, update.Message.From.ID)
 	if err != nil {
-		tgutil.Reply(ctx, h.bot, update.Message.Chat.ID, tryStartText(err))
+		tgutil.Reply(ctx, h.bot, h.responseChatID, tryStartText(err))
 		return
 	}
 
-	renderChallenges(ctx, h, update.Message.Chat.ID, challenges)
+	renderChallenges(ctx, h, h.responseChatID, challenges)
 }
 
 // renderChallenges рисует список вызовов: текст + кнопки «взять».
@@ -148,7 +148,7 @@ func (h *Handler) HandleAcceptCallback(ctx context.Context, query telego.Callbac
 		return
 	}
 
-	announceResult(ctx, h, query, result)
+	announceResult(ctx, h, query, challengeID, result)
 }
 
 func playFightAnimation(ctx context.Context, h *Handler, query telego.CallbackQuery) {
@@ -165,7 +165,7 @@ func playFightAnimation(ctx context.Context, h *Handler, query telego.CallbackQu
 	}
 }
 
-func announceResult(ctx context.Context, h *Handler, query telego.CallbackQuery, result fight_service.AcceptChallengeResult) {
+func announceResult(ctx context.Context, h *Handler, query telego.CallbackQuery, challengeID int, result fight_service.AcceptChallengeResult) {
 	var acceptorText string
 	if result.AcceptorWon {
 		acceptorText = fmt.Sprintf("🏆 Ты победил!\n🍯 +%d мёда", result.Amount)
@@ -175,14 +175,18 @@ func announceResult(ctx context.Context, h *Handler, query telego.CallbackQuery,
 	tgutil.EditCallbackMessage(ctx, h.bot, query, acceptorText)
 	tgutil.AnswerCallback(ctx, h.bot, query.ID, "Итог боя")
 
-	// Итог второму участнику отдельным сообщением.
-	var opponentText string
+	// Итог боя видим всем в игровом чате: у обоих участников он общий.
+	opponentText := fmt.Sprintf(
+		"💀 Вызов №%d на 🍯 %d разыгран\nМёд ушёл к @%s",
+		challengeID, result.Amount, query.From.Username,
+	)
 	if result.AcceptorWon {
-		opponentText = fmt.Sprintf("💀 Твой вызов приняли и ты проиграл...\n🍯 -%d мёда", result.Amount)
-	} else {
-		opponentText = fmt.Sprintf("🏆 Твой вызов приняли и ты победил!\n🍯 +%d мёда", result.Amount)
+		opponentText = fmt.Sprintf(
+			"🏆 Вызов №%d на 🍯 %d разыгран\nМёд ушёл к @%s",
+			challengeID, result.Amount, query.From.Username,
+		)
 	}
-	tgutil.Reply(ctx, h.bot, result.OpponentTgChatID, opponentText)
+	tgutil.Reply(ctx, h.bot, h.responseChatID, opponentText)
 }
 
 // --- тексты ошибок ---

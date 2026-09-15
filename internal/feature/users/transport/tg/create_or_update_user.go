@@ -19,7 +19,7 @@ func (h *Handler) HandleCreateOrUpdateUser(ctx context.Context, update *telego.U
 
 	user, err := h.service.CreateOrUpdateUser(ctx, newUser)
 	if err != nil {
-		msg := tu.Message(tu.ID(update.Message.Chat.ID), "Ошибка сохранения пользователя(")
+		msg := tu.Message(tu.ID(h.responseChatID), "Ошибка сохранения пользователя(")
 		log.Println(err)
 		_, sendErr := h.bot.SendMessage(ctx, msg)
 		if sendErr != nil {
@@ -29,7 +29,7 @@ func (h *Handler) HandleCreateOrUpdateUser(ctx context.Context, update *telego.U
 	}
 
 	msg := tu.Message(
-		tu.ID(update.Message.Chat.ID),
+		tu.ID(h.responseChatID),
 		fmt.Sprintf("🐻 Ты медведь!\nID: %d\nИмя: %s\n🍯 Мёд: %d", user.ID, user.UserName, user.Honey),
 	)
 	_, err = h.bot.SendMessage(ctx, msg)

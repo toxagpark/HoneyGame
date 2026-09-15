@@ -10,17 +10,17 @@ import (
 
 const minChallengeAmount = 1
 
-// CreateChallenge создаёт вызов от игрока (по tg_chat_id) со списанием ставки.
+// CreateChallenge создаёт вызов от игрока (по tg_user_id) со списанием ставки.
 func (s *Service) CreateChallenge(
 	ctx context.Context,
-	tgChatID int64,
+	tgUserID int64,
 	amount int64,
 ) (domain.ActiveChallenge, error) {
 	if amount < minChallengeAmount {
 		return domain.ActiveChallenge{}, domain.ErrWrongAmount
 	}
 
-	user, err := s.users.GetUser(ctx, tgChatID)
+	user, err := s.users.GetUser(ctx, tgUserID)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) ||
 			errors.Is(err, domain.ErrUserHoneyNotFound) {
