@@ -16,6 +16,10 @@ import (
 	fight_pg_repo "github.com/toxagpark/HoneyGame/internal/feature/fight/repository/postgres"
 	fight_service "github.com/toxagpark/HoneyGame/internal/feature/fight/service"
 	fight_tg_transport "github.com/toxagpark/HoneyGame/internal/feature/fight/transport/tg"
+	honey_day "github.com/toxagpark/HoneyGame/internal/feature/honey_day"
+	honey_day_pg_repo "github.com/toxagpark/HoneyGame/internal/feature/honey_day/repository/postgres"
+	honey_day_service "github.com/toxagpark/HoneyGame/internal/feature/honey_day/service"
+	honey_day_tg_transport "github.com/toxagpark/HoneyGame/internal/feature/honey_day/transport/tg"
 	users_pg_repo "github.com/toxagpark/HoneyGame/internal/feature/users/repository/postgres"
 	users_service "github.com/toxagpark/HoneyGame/internal/feature/users/service"
 	users_tg_transport "github.com/toxagpark/HoneyGame/internal/feature/users/transport/tg"
@@ -55,6 +59,11 @@ func main() {
 	fightRepo := fight_pg_repo.NewRepository(pool)
 	fightService := fight_service.NewService(fightRepo, service)
 	fightTransport := fight_tg_transport.NewHandler(bot, tgCfg.CHAT_ID, fightService)
+
+	honeyDayRepo := honey_day_pg_repo.NewRepository(pool)
+	honeyDayService := honey_day_service.NewService(honeyDayRepo)
+	honeyDayCfg := honey_day.NewConfigMust()
+	honeyDayTransport := honey_day_tg_transport.NewHandler(bot, tgCfg.CHAT_ID, honeyDayCfg.INTERVAL, honeyDayService)
 
 	bh, err := th.NewBotHandler(bot, updates)
 	if err != nil {
@@ -110,6 +119,8 @@ func main() {
 			log.Printf("bot handler: %v", err)
 		}
 	}()
+
+	go honeyDayTransport.Run(ctx)
 
 	<-ctx.Done()
 

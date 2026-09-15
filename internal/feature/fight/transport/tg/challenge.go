@@ -166,27 +166,18 @@ func playFightAnimation(ctx context.Context, h *Handler, query telego.CallbackQu
 }
 
 func announceResult(ctx context.Context, h *Handler, query telego.CallbackQuery, challengeID int, result fight_service.AcceptChallengeResult) {
-	var acceptorText string
+	// Исход боя адресно знает только тот, кто жал кнопку; остальной чат видит нейтральное сообщение.
 	if result.AcceptorWon {
-		acceptorText = fmt.Sprintf("🏆 Ты победил!\n🍯 +%d мёда", result.Amount)
+		tgutil.EditCallbackMessage(ctx, h.bot, query, "🏆 Ты победил!\n🍯 +"+fmt.Sprint(result.Amount)+" мёда")
 	} else {
-		acceptorText = fmt.Sprintf("💀 Ты проиграл...\n🍯 -%d мёда", result.Amount)
+		tgutil.EditCallbackMessage(ctx, h.bot, query, "💀 Ты проиграл...\n🍯 -"+fmt.Sprint(result.Amount)+" мёда")
 	}
-	tgutil.EditCallbackMessage(ctx, h.bot, query, acceptorText)
 	tgutil.AnswerCallback(ctx, h.bot, query.ID, "Итог боя")
 
-	// Итог боя видим всем в игровом чате: у обоих участников он общий.
-	opponentText := fmt.Sprintf(
-		"💀 Вызов №%d на 🍯 %d разыгран\nМёд ушёл к @%s",
-		challengeID, result.Amount, query.From.Username,
-	)
-	if result.AcceptorWon {
-		opponentText = fmt.Sprintf(
-			"🏆 Вызов №%d на 🍯 %d разыгран\nМёд ушёл к @%s",
-			challengeID, result.Amount, query.From.Username,
-		)
-	}
-	tgutil.Reply(ctx, h.bot, h.responseChatID, opponentText)
+	tgutil.Reply(ctx, h.bot, h.responseChatID, fmt.Sprintf(
+		"⚔️ Вызов №%d на 🍯 %d разыгран\nМёд нашёл своего медведя 🐻",
+		challengeID, result.Amount,
+	))
 }
 
 // --- тексты ошибок ---
