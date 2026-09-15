@@ -39,10 +39,11 @@ func (h *Handler) HandleCreateChallenge(ctx context.Context, update *telego.Upda
 		tu.ID(h.responseChatID),
 		fmt.Sprintf("⚔️ Вызов №%d создан!\n🐻 %s ставит 🍯 %d\nКто смелый?!", challenge.ID, challenge.CreatorName, challenge.Amount),
 	)
-	// Свои вызовы принимает только соперник — из меню и /fights, поэтому кнопка «Взять» тут не нужна.
+	// «Принять» прямо тут: друзьям не нужно писать /fights. Свой бой по-прежнему нельзя.
 	msg.WithReplyMarkup(
 		tu.InlineKeyboard(
 			tu.InlineKeyboardRow(
+				tu.InlineKeyboardButton("🗡 Принять вызов").WithCallbackData(fmt.Sprintf("%s%d", callbackPrefixAccept, challenge.ID)),
 				tu.InlineKeyboardButton("✖️ Отозвать").WithCallbackData(fmt.Sprintf("%s%d", callbackPrefixCancel, challenge.ID)),
 			),
 		),
@@ -139,10 +140,12 @@ func (h *Handler) HandleAcceptCallback(ctx context.Context, query telego.Callbac
 		switch {
 		case errors.Is(err, domain.ErrChallengeNotFound):
 			tgutil.EditCallbackMessage(ctx, h.bot, query, "⌛️ Вызов уже забрали другим медведем 🐻")
+		case errors.Is(err, domain.ErrSelfChallenge):
+			tgutil.EditCallbackMessage(ctx, h.bot, query, "🐻 На себя драться нельзя")
 		case errors.Is(err, domain.ErrNotEnoughHoney):
-			tgutil.EditCallbackMessage(ctx, h.bot, query, "🤷 Не хватило мёда на бой. Попробуйте прописать /start")
+			tgutil.EditCallbackMessage(ctx, h.bot, query, "🤷 Не хватило мёда на бой 🐻 Пополни запасы медовым днём")
 		default:
-			tgutil.EditCallbackMessage(ctx, h.bot, query, "Ошибка боя( Попробуйте прописать /start")
+			tgutil.EditCallbackMessage(ctx, h.bot, query, "Ошибка боя( Попробуйте ещё раз")
 		}
 		tgutil.AnswerCallback(ctx, h.bot, query.ID, "Бой не состоялся")
 		return
@@ -166,18 +169,34 @@ func playFightAnimation(ctx context.Context, h *Handler, query telego.CallbackQu
 }
 
 func announceResult(ctx context.Context, h *Handler, query telego.CallbackQuery, challengeID int, result fight_service.AcceptChallengeResult) {
-	// Исход боя адресно знает только тот, кто жал кнопку; остальной чат видит нейтральное сообщение.
-	if result.AcceptorWon {
-		tgutil.EditCallbackMessage(ctx, h.bot, query, "🏆 Ты победил!\n🍯 +"+fmt.Sprint(result.Amount)+" мёда")
-	} else {
-		tgutil.EditCallbackMessage(ctx, h.bot, query, "💀 Ты проиграл...\n🍯 -"+fmt.Sprint(result.Amount)+" мёда")
-	}
-	tgutil.AnswerCallback(ctx, h.bot, query.ID, "Итог боя")
-
-	tgutil.Reply(ctx, h.bot, h.responseChatID, fmt.Sprintf(
-		"⚔️ Вызов №%d на 🍯 %d разыгран\nМёд нашёл своего медведя 🐻",
-		challengeID, result.Amount,
+	// Одно сообщение на весь чат: фраза + победитель и проигравший (имена из БД).
+	tgutil.EditCallbackMessage(ctx, h.bot, query, fmt.Sprintf(
+		"%s\n\n🏆 @%s обыграл 💀 @%s\n🍯 Банк: %d мёда",
+		fightResultPhrase(h.rand.Intn(len(fightResultPhrases))),
+		result.WinnerName,
+		result.LoserName,
+		result.Amount,
 	))
+	tgutil.AnswerCallback(ctx, h.bot, query.ID, "Итог боя")
+}
+
+// fightResultPhrase возвращает случайную фразу итога боя по индексу.
+func fightResultPhrase(i int) string {
+	return fightResultPhrases[i]
+}
+
+// fightResultPhrases — прикольные фразы итога боя.
+var fightResultPhrases = []string{
+	"💥 Мёд разлетелся по всей поляне!",
+	"🐻 Ух! Лапы оказались сильнее!",
+	"🍯 Этот мёд теперь пахнет победой!",
+	"⚡️ Блицкриг! Даже пчёлы не успели моргнуть!",
+	"🥊 Дзынь! И банк сменил хозяина!",
+	"🌪 Вихрь лап и ушей — и всё кончено!",
+	"🏆 Историки медовых войн будут это обсуждать!",
+	"🐻‍❄️ Проигравший ушёл в спячку до следующего боя!",
+	"🍯 Улей аплодирует стоя!",
+	"🔥 Это был бой века! Мёд — достойному!",
 }
 
 // --- тексты ошибок ---

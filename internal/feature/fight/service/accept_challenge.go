@@ -8,10 +8,12 @@ import (
 	"github.com/toxagpark/HoneyGame/internal/core/domain"
 )
 
-// AcceptChallengeResult — исход боя с точки зрения принявшего вызов.
+// AcceptChallengeResult — исход боя с точки зрения чата: имена победителя
+// и проигравшего из БД и ставка.
 type AcceptChallengeResult struct {
-	AcceptorWon bool
-	Amount      int64
+	WinnerName string
+	LoserName  string
+	Amount     int64
 }
 
 // ValidateAccept проверяет, можно ли принять вызов. Нужен транспорту,
@@ -88,8 +90,18 @@ func (s *Service) AcceptChallenge(
 		return AcceptChallengeResult{}, fmt.Errorf("failed to fight: %w", err)
 	}
 
+	// Имена обоих участников — из БД: у создателя имя пришло с вызовом,
+	// у принявшего — из профиля (для безюзернеймных оно сгенерировано при /start).
+	winnerName := user.UserName
+	loserName := challenge.CreatorName
+	if result.WinnerUserID == challenge.CreatorUserID {
+		winnerName = challenge.CreatorName
+		loserName = user.UserName
+	}
+
 	return AcceptChallengeResult{
-		AcceptorWon: result.WinnerUserID == user.ID,
-		Amount:      result.Amount,
+		WinnerName: winnerName,
+		LoserName:  loserName,
+		Amount:     result.Amount,
 	}, nil
 }

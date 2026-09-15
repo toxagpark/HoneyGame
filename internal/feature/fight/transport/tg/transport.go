@@ -2,6 +2,8 @@ package fight_tg_transport
 
 import (
 	"context"
+	"math/rand"
+	"time"
 
 	telego "github.com/mymmrac/telego"
 	"github.com/toxagpark/HoneyGame/internal/core/domain"
@@ -13,6 +15,7 @@ type Handler struct {
 	// responseChatID — игровой чат из TG_CHAT_ID: сюда бот отвечает всем игрокам.
 	responseChatID int64
 	service        service
+	rand           *rand.Rand
 }
 
 // service — интерфейс фичи fight с точки зрения транспорта.
@@ -56,5 +59,6 @@ func NewHandler(
 		bot:            bot,
 		responseChatID: responseChatID,
 		service:        service,
+		rand:           rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
