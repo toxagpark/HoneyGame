@@ -101,6 +101,11 @@ func main() {
 	}, th.CommandEqual("fights"))
 
 	bh.Handle(func(ctx *th.Context, update telego.Update) error {
+		fightTransport.HandleMyChallenge(ctx, &update)
+		return nil
+	}, th.CommandEqual("myfight"))
+
+	bh.Handle(func(ctx *th.Context, update telego.Update) error {
 		if update.CallbackQuery != nil {
 			fightTransport.HandleAcceptCallback(ctx, *update.CallbackQuery)
 		}

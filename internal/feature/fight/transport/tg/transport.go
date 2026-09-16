@@ -31,6 +31,11 @@ type service interface {
 		tgUserID int64,
 	) ([]domain.ActiveChallenge, error)
 
+	MyChallenge(
+		ctx context.Context,
+		tgUserID int64,
+	) (domain.ActiveChallenge, error)
+
 	CancelChallenge(
 		ctx context.Context,
 		tgUserID int64,

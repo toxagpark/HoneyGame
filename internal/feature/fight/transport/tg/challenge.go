@@ -51,6 +51,35 @@ func (h *Handler) HandleCreateChallenge(ctx context.Context, update *telego.Upda
 	tgutil.Send(ctx, h.bot, msg)
 }
 
+func (h *Handler) HandleMyChallenge(ctx context.Context, update *telego.Update) {
+	if update.Message == nil {
+		return
+	}
+
+	challenge, err := h.service.MyChallenge(ctx, update.Message.From.ID)
+	if err != nil {
+		if errors.Is(err, domain.ErrChallengeNotFound) {
+			tgutil.Reply(ctx, h.bot, h.responseChatID, "Активного вызова у тебя нет 🐻 Создай: /fight <ставка>")
+			return
+		}
+		tgutil.Reply(ctx, h.bot, h.responseChatID, tryStartText(err))
+		return
+	}
+
+	msg := tu.Message(
+		tu.ID(h.responseChatID),
+		fmt.Sprintf("⚔️ Твой вызов №%d!\n🐻 %s ставит 🍯 %d\nКто смелый?!", challenge.ID, challenge.CreatorName, challenge.Amount),
+	)
+	msg.WithReplyMarkup(
+		tu.InlineKeyboard(
+			tu.InlineKeyboardRow(
+				tu.InlineKeyboardButton("✖️ Отозвать").WithCallbackData(fmt.Sprintf("%s%d", callbackPrefixCancel, challenge.ID)),
+			),
+		),
+	)
+	tgutil.Send(ctx, h.bot, msg)
+}
+
 func (h *Handler) HandleListChallenges(ctx context.Context, update *telego.Update) {
 	if update.Message == nil {
 		return
