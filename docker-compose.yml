@@ -22,5 +22,12 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
 
+  plantuml:
+    image: plantuml/plantuml:latest
+    entrypoint: ["java", "-jar", "/opt/plantuml.jar", "-charset", "UTF-8", "-o", "out"]
+    volumes:
+      - ${PROJECT_ROOT}/docs:/docs
+    working_dir: /docs
+
 volumes:
   postgres_data:

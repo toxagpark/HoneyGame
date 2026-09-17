@@ -1,0 +1,47 @@
+@startuml c4-context
+!include <C4/C4_Context>
+
+title HoneyGame — C4, уровень 1: контекст системы
+
+Person(player, "Игрок (медведь)", "Участник Telegram-чата: дерётся за мёд, грабит ульи, кормится медовым днём, боится злых пчёл")
+
+System(honeygame, "HoneyGame", "Telegram-бот: бои за мёд (/fight), ограбление улья (/murder), медовый день, злые пчёлы, таблица лидеров (/top)")
+
+System_Ext(telegram, "Telegram Bot API", "Доставка сообщений, inline-кнопок и обновлений чата")
+
+Rel(player, honeygame, "Пишет команды и жмёт кнопки", "/start /fight /murder /top")
+Rel(honeygame, telegram, "Отправляет сообщения, анимации и итоги", "HTTPS")
+Rel(telegram, honeygame, "Доставляет обновления чата", "long polling")
+
+SHOW_LEGEND()
+@enduml
+
+@startuml c4-containers
+!include <C4/C4_Container>
+
+title HoneyGame — C4, уровень 2: контейнеры
+
+Person(player, "Игрок (медведь)", "Пишет команды, жмёт inline-кнопки")
+
+System_Boundary(hg, "HoneyGame (Go)") {
+  Container(tgTransport, "Telegram-транспорт", "Go · telego", "Хендлеры команд и кнопок, анимации боя и ограбления, отправка сообщений в игровой чат")
+
+  Container(workers, "Воркеры", "Go · time.Ticker", "Медовый день: раздаёт мёд всем. Злые пчёлы: кусают АФК-медведей")
+
+  Container(services, "Сервисы фич", "Go", "users · fight · murder · honey_day · bad_bees: валидации, правила, деньги")
+
+  ContainerDb(pg, "PostgreSQL", "postgres 18 · схема honey", "users, user_honey, challenges, active_challenges, murders")
+}
+
+System_Ext(telegram, "Telegram Bot API", "Обмен сообщениями и updates")
+
+Rel(player, tgTransport, "Команды и кнопки", "/start /fight /murder /top")
+Rel(telegram, tgTransport, "updates чата", "long polling")
+Rel(tgTransport, telegram, "Сообщения и анимации", "HTTPS")
+Rel(tgTransport, services, "Вызывает сценарии", "func call")
+Rel(workers, services, "Периодические задачи", "func call")
+Rel(workers, telegram, "Итоги дня и налётов в общий чат", "HTTPS")
+Rel(services, pg, "Читает и пишет деньги", "SQL · pgx")
+
+SHOW_LEGEND()
+@enduml
