@@ -7,17 +7,14 @@ import (
 	"time"
 
 	"github.com/toxagpark/HoneyGame/internal/core/domain"
-)
-
-// minHoneyDayGift и maxHoneyDayGift — границы личного подарка медового дня.
-const (
-	minHoneyDayGift = 5
-	maxHoneyDayGift = 25
+	"github.com/toxagpark/HoneyGame/internal/feature/honey_day"
 )
 
 type Service struct {
-	repo repository
-	rand *rand.Rand
+	repo            repository
+	rand            *rand.Rand
+	minHoneyDayGift int64
+	maxHoneyDayGift int64
 }
 
 // HoneyDayGift — персональный подарок одного медового дня.
@@ -41,10 +38,13 @@ type repository interface {
 
 func NewService(
 	repo repository,
+	cfg *honey_day.Config,
 ) *Service {
 	return &Service{
-		repo: repo,
-		rand: rand.New(rand.NewSource(time.Now().UnixNano())),
+		repo:            repo,
+		rand:            rand.New(rand.NewSource(time.Now().UnixNano())),
+		minHoneyDayGift: cfg.MIN_HONEY_GIFT,
+		maxHoneyDayGift: cfg.MAX_HONEY_GIFT,
 	}
 }
 
@@ -63,7 +63,7 @@ func (s *Service) GiveHoneyDay(
 
 	gifts := make([]int64, len(userIDs))
 	for i := range gifts {
-		gifts[i] = minHoneyDayGift + s.rand.Int63n(maxHoneyDayGift-minHoneyDayGift+1)
+		gifts[i] = s.minHoneyDayGift + s.rand.Int63n(s.maxHoneyDayGift-s.minHoneyDayGift+1)
 	}
 
 	users, err := s.repo.AddHoneyToPlayers(ctx, userIDs, gifts)

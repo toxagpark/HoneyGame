@@ -13,6 +13,7 @@ erDiagram
     users ||--o{ challenges : "победил"
     users ||--o{ challenges : "проиграл"
     users ||--o| active_challenges : "создал вызов"
+    users ||--o{ murders : "грабил"
 
     users {
         int id PK
@@ -38,6 +39,15 @@ erDiagram
         int id PK
         int creator_user_id FK
         bigint amount
+        timestamp created_at
+    }
+
+    murders {
+        int id PK
+        int user_id FK
+        int hives
+        bigint amount
+        bigint honey
         timestamp created_at
     }
 ```
@@ -93,12 +103,29 @@ erDiagram
 - `UNIQUE (creator_user_id)` — у одного игрока максимум один активный вызов;
 - удаление строки происходит в момент боя (ставка разыгрывается) или отзыва (ставка возвращается).
 
+### `honey.murders`
+
+Журнал ограблений улья (миграция `000003_add_murders`). Каждая игра `/murder`
+пишет одну строку: `amount` — ставка, `honey` — чистый итог ограбления
+(отрицательный — проигрыш, положительный — выплата «ставка × ульи»).
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| id | SERIAL | Первичный ключ |
+| user_id | INTEGER | ID игрока (FK на users, CASCADE) |
+| hives | INTEGER | Сколько ульев было на поляне, CHECK (hives > 0) |
+| amount | BIGINT | Ставка, CHECK (amount > 0) |
+| honey | BIGINT | Чистый итог: −ставка или +ставка × ульи |
+| created_at | TIMESTAMP WITH TIME ZONE | Время ограбления |
+
 ## Индексы
 
 - `idx_challenges_winner` — по `winner_user_id`
 - `idx_challenges_loser` — по `loser_user_id`
 - `idx_challenges_completed_at` — по `completed_at`
 - `idx_active_challenges_creator` — по `creator_user_id` (в дополнение к UNIQUE)
+- `idx_murders_user_id` — по `user_id`
+- `idx_murders_created_at` — по `created_at`
 
 ## Миграции
 
@@ -106,3 +133,4 @@ erDiagram
 
 - **000001_init** — схема `honey`, таблицы `users`, `user_honey`, `challenges`, индексы
 - **000002_add_active_challenges** — таблица `active_challenges` + индекс
+- **000003_add_murders** — таблица `murders` + индексы

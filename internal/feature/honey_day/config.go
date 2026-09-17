@@ -9,7 +9,9 @@ import (
 
 type Config struct {
 	// INTERVAL — период медового дня, формат time.Duration: 24h, 12h30m, 45s.
-	INTERVAL time.Duration `envconfig:"INTERVAL"`
+	INTERVAL       time.Duration `envconfig:"INTERVAL"`
+	MAX_HONEY_GIFT int64         `envconfig:"MAX_HONEY_GIFT"`
+	MIN_HONEY_GIFT int64         `envconfig:"MIN_HONEY_GIFT"`
 }
 
 func NewConfig() (*Config, error) {

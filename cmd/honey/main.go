@@ -20,6 +20,9 @@ import (
 	honey_day_pg_repo "github.com/toxagpark/HoneyGame/internal/feature/honey_day/repository/postgres"
 	honey_day_service "github.com/toxagpark/HoneyGame/internal/feature/honey_day/service"
 	honey_day_tg_transport "github.com/toxagpark/HoneyGame/internal/feature/honey_day/transport/tg"
+	murder_pg_repo "github.com/toxagpark/HoneyGame/internal/feature/murder/repository/postgres"
+	murder_service "github.com/toxagpark/HoneyGame/internal/feature/murder/service"
+	murder_tg_transport "github.com/toxagpark/HoneyGame/internal/feature/murder/transport/tg"
 	users_pg_repo "github.com/toxagpark/HoneyGame/internal/feature/users/repository/postgres"
 	users_service "github.com/toxagpark/HoneyGame/internal/feature/users/service"
 	users_tg_transport "github.com/toxagpark/HoneyGame/internal/feature/users/transport/tg"
@@ -61,9 +64,13 @@ func main() {
 	fightTransport := fight_tg_transport.NewHandler(bot, tgCfg.CHAT_ID, fightService)
 
 	honeyDayRepo := honey_day_pg_repo.NewRepository(pool)
-	honeyDayService := honey_day_service.NewService(honeyDayRepo)
 	honeyDayCfg := honey_day.NewConfigMust()
+	honeyDayService := honey_day_service.NewService(honeyDayRepo, honeyDayCfg)
 	honeyDayTransport := honey_day_tg_transport.NewHandler(bot, tgCfg.CHAT_ID, honeyDayCfg.INTERVAL, honeyDayService)
+
+	murderRepo := murder_pg_repo.NewRepository(pool)
+	murderService := murder_service.NewService(murderRepo, service)
+	murderTransport := murder_tg_transport.NewHandler(bot, tgCfg.CHAT_ID, murderService)
 
 	bh, err := th.NewBotHandler(bot, updates)
 	if err != nil {
@@ -118,6 +125,11 @@ func main() {
 		}
 		return nil
 	}, th.CallbackDataPrefix("fight:cancel:"))
+
+	bh.Handle(func(ctx *th.Context, update telego.Update) error {
+		murderTransport.HandleMurder(ctx, &update)
+		return nil
+	}, th.CommandEqual("murder"))
 
 	go func() {
 		if err := bh.Start(); err != nil {
