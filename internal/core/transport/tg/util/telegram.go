@@ -62,3 +62,30 @@ func ParseCallbackID(data string, prefix string) (int, bool) {
 	}
 	return id, true
 }
+
+// SendMessage отправляет сообщение в чат и возвращает его ID: нужно анимациям,
+// которые редактируют своё сообщение по ходу игры.
+func SendMessage(
+	ctx context.Context,
+	bot *telego.Bot,
+	msg *telego.SendMessageParams,
+) (int, error) {
+	sent, err := bot.SendMessage(ctx, msg)
+	if err != nil {
+		return 0, err
+	}
+	return sent.MessageID, nil
+}
+
+// EditMessage меняет текст ранее отправленного сообщения.
+func EditMessage(
+	ctx context.Context,
+	bot *telego.Bot,
+	chatID int64,
+	messageID int,
+	text string,
+) {
+	if _, err := bot.EditMessageText(ctx, tu.EditMessageText(tu.ID(chatID), messageID, text)); err != nil {
+		log.Println("edit message error:", err)
+	}
+}

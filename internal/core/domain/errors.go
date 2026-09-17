@@ -13,4 +13,6 @@ var (
 	ErrChallengeNotOwner      = errors.New("not challenge creator")
 	ErrSelfChallenge          = errors.New("cannot accept own challenge")
 	ErrWrongAmount            = errors.New("wrong amount")
+
+	ErrWrongHives = errors.New("wrong hives count")
 )
