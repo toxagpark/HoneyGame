@@ -13,6 +13,10 @@ import (
 
 	core_postgres "github.com/toxagpark/HoneyGame/internal/core/postgres"
 	tgbot "github.com/toxagpark/HoneyGame/internal/core/transport/tg/bot"
+	bad_bees "github.com/toxagpark/HoneyGame/internal/feature/bad_bees"
+	bad_bees_pg_repo "github.com/toxagpark/HoneyGame/internal/feature/bad_bees/repository/postgres"
+	bad_bees_service "github.com/toxagpark/HoneyGame/internal/feature/bad_bees/service"
+	bad_bees_tg_transport "github.com/toxagpark/HoneyGame/internal/feature/bad_bees/transport/tg"
 	fight_pg_repo "github.com/toxagpark/HoneyGame/internal/feature/fight/repository/postgres"
 	fight_service "github.com/toxagpark/HoneyGame/internal/feature/fight/service"
 	fight_tg_transport "github.com/toxagpark/HoneyGame/internal/feature/fight/transport/tg"
@@ -71,6 +75,11 @@ func main() {
 	murderRepo := murder_pg_repo.NewRepository(pool)
 	murderService := murder_service.NewService(murderRepo, service)
 	murderTransport := murder_tg_transport.NewHandler(bot, tgCfg.CHAT_ID, murderService)
+
+	badBeesCfg := bad_bees.NewConfigMust()
+	badBeesRepo := bad_bees_pg_repo.NewRepository(pool)
+	badBeesService := bad_bees_service.NewService(badBeesRepo, badBeesCfg)
+	badBeesTransport := bad_bees_tg_transport.NewHandler(bot, tgCfg.CHAT_ID, badBeesCfg.INTERVAL, badBeesService)
 
 	bh, err := th.NewBotHandler(bot, updates)
 	if err != nil {
@@ -138,6 +147,7 @@ func main() {
 	}()
 
 	go honeyDayTransport.Run(ctx)
+	go badBeesTransport.Run(ctx)
 
 	<-ctx.Done()
 
